@@ -85,7 +85,7 @@ export function KairosPanel({ tasks, onToggle }: KairosPanelProps) {
                 variant="outline"
                 className={cn("border text-[10px]", priorityBadge[task.priority])}
               >
-                {task.dueLabel}
+                {task.due_label}
               </Badge>
             </div>
           ))}

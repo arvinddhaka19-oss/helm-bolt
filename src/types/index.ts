@@ -7,7 +7,8 @@ export interface Task {
   title: string
   completed: boolean
   priority: TaskPriority
-  dueLabel: string
+  due_label: string
+  created_at: string
 }
 
 export interface AtlasMetric {
@@ -31,4 +32,5 @@ export interface HelmAlert {
   description: string
   severity: AlertSeverity
   time: string
+  created_at: string
 }

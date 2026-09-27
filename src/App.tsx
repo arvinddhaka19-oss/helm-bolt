@@ -8,8 +8,8 @@ import { AtlasCard } from "@/components/atlas-card"
 import { MetisCard } from "@/components/metis-card"
 import { KairosPanel } from "@/components/kairos-panel"
 import { AlertTicker } from "@/components/alert-ticker"
-import { atlasMetrics, metisMetrics, initialTasks, helmAlerts } from "@/data/mock-data"
-import type { Task } from "@/types"
+import { atlasMetrics, metisMetrics } from "@/data/mock-data"
+import { useHelmData } from "@/hooks/use-helm-data"
 
 function formatTime(date: Date): string {
   return date.toLocaleTimeString("en-GB", {
@@ -19,7 +19,7 @@ function formatTime(date: Date): string {
 }
 
 export function App() {
-  const [tasks, setTasks] = useState<Task[]>(initialTasks)
+  const { tasks, alerts, loading, toggleTask } = useHelmData()
   const [sheetOpen, setSheetOpen] = useState(false)
   const [currentTime, setCurrentTime] = useState(() => formatTime(new Date()))
 
@@ -30,15 +30,7 @@ export function App() {
     return () => clearInterval(interval)
   }, [])
 
-  const toggleTask = (id: string) => {
-    setTasks((prev) =>
-      prev.map((t) =>
-        t.id === id ? { ...t, completed: !t.completed } : t
-      )
-    )
-  }
-
-  const topAlert = helmAlerts[0]
+  const topAlert = alerts[0]
 
   return (
     <div className="flex h-svh flex-col bg-[#040D0A] text-[#F8FAFC]">
@@ -92,7 +84,11 @@ export function App() {
 
         {/* Center stage — Voice Node */}
         <div className="flex items-center justify-center overflow-hidden rounded-xl bg-[#0A1C14]/30">
-          <VoiceNode />
+          {loading ? (
+            <p className="text-sm text-[#F8FAFC]/40">Loading...</p>
+          ) : (
+            <VoiceNode />
+          )}
         </div>
 
         {/* Right column — KAIROS (hidden on mobile) */}
@@ -102,7 +98,7 @@ export function App() {
       </main>
 
       {/* Alert ticker (desktop floating) */}
-      <AlertTicker alerts={helmAlerts} maxVisible={2} />
+      <AlertTicker alerts={alerts} maxVisible={2} />
 
       {/* Mobile slide-over sheet */}
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
