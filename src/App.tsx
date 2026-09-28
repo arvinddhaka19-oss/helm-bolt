@@ -8,8 +8,8 @@ import { AtlasCard } from "@/components/atlas-card"
 import { MetisCard } from "@/components/metis-card"
 import { KairosPanel } from "@/components/kairos-panel"
 import { AlertTicker } from "@/components/alert-ticker"
-import { atlasMetrics, metisMetrics } from "@/data/mock-data"
 import { useHelmData } from "@/hooks/use-helm-data"
+import type { ParsedIntent } from "@/types"
 
 function formatTime(date: Date): string {
   return date.toLocaleTimeString("en-GB", {
@@ -19,7 +19,16 @@ function formatTime(date: Date): string {
 }
 
 export function App() {
-  const { tasks, alerts, loading, toggleTask } = useHelmData()
+  const {
+    tasks,
+    alerts,
+    atlasMetrics,
+    metisMetrics,
+    activityLog,
+    loading,
+    toggleTask,
+    processVoiceIntent,
+  } = useHelmData()
   const [sheetOpen, setSheetOpen] = useState(false)
   const [currentTime, setCurrentTime] = useState(() => formatTime(new Date()))
 
@@ -31,6 +40,10 @@ export function App() {
   }, [])
 
   const topAlert = alerts[0]
+
+  const handleVoiceIntent = async (intent: ParsedIntent) => {
+    return processVoiceIntent(intent)
+  }
 
   return (
     <div className="flex h-svh flex-col bg-[#040D0A] text-[#F8FAFC]">
@@ -87,7 +100,10 @@ export function App() {
           {loading ? (
             <p className="text-sm text-[#F8FAFC]/40">Loading...</p>
           ) : (
-            <VoiceNode />
+            <VoiceNode
+              activityLog={activityLog}
+              processVoiceIntent={handleVoiceIntent}
+            />
           )}
         </div>
 
