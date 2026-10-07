@@ -54,7 +54,7 @@ export function VoiceNode({ activityLog, processVoiceIntent }: VoiceNodeProps) {
   }, [error, phase])
 
   const handleMicClick = useCallback(() => {
-    if (phase === "idle") {
+    if (phase === "idle" || error) {
       reset()
       start()
       setPhase("listening")
@@ -116,7 +116,7 @@ export function VoiceNode({ activityLog, processVoiceIntent }: VoiceNodeProps) {
   }, [phase, isListening, transcript, interimTranscript, processVoiceIntent, reset])
 
   const fullTranscript = (transcript + " " + interimTranscript).trim()
-
+  const isListeningUi = phase === "listening" && !error
   const isProcessing = phase === "processing"
   const isResult = phase === "result"
 
@@ -179,7 +179,7 @@ export function VoiceNode({ activityLog, processVoiceIntent }: VoiceNodeProps) {
 
       {/* Ripple rings */}
       <div className="relative flex items-center justify-center">
-        {(phase === "listening" || isProcessing) && (
+        {(isListeningUi || isProcessing) && (
           <>
             <span
               className="absolute inset-0 rounded-full border-2 border-[#FFD700]"
@@ -200,12 +200,12 @@ export function VoiceNode({ activityLog, processVoiceIntent }: VoiceNodeProps) {
         <button
           onClick={handleMicClick}
           disabled={isProcessing || isResult || !isSupported}
-          aria-label={phase === "listening" ? "Stop listening" : "Start voice input"}
+          aria-label={isListeningUi ? "Stop listening" : "Start voice input"}
           className={cn(
             "relative z-10 flex size-36 items-center justify-center rounded-full transition-all duration-300 outline-none md:size-48",
             isProcessing || isResult
               ? "bg-[#0A1C14] border-2 border-[#FFD700]/40"
-              : phase === "listening"
+              : isListeningUi
                 ? "bg-[#FFD700]"
                 : "bg-[#FFD700] hover:scale-105"
           )}
@@ -213,7 +213,7 @@ export function VoiceNode({ activityLog, processVoiceIntent }: VoiceNodeProps) {
             animation:
               isProcessing || isResult
                 ? undefined
-                : phase === "listening"
+                : isListeningUi
                   ? "helm-listening-glow 1.5s ease-in-out infinite"
                   : "helm-glow-pulse 3s ease-in-out infinite",
           }}
@@ -232,7 +232,7 @@ export function VoiceNode({ activityLog, processVoiceIntent }: VoiceNodeProps) {
 
       {/* Status text + transcript */}
       <div className="flex min-h-[80px] flex-col items-center gap-1">
-        {phase === "listening" ? (
+        {isListeningUi ? (
           <>
             <p className="text-base font-semibold tracking-wide text-[#FFD700] md:text-lg">
               Listening...
@@ -305,7 +305,7 @@ export function VoiceNode({ activityLog, processVoiceIntent }: VoiceNodeProps) {
       {/* Activity log — always visible, driven by real DB entries */}
       <div className="mt-2 flex w-full max-w-sm flex-col gap-1.5 rounded-lg border border-[#0A1C14] bg-[#040D0A]/60 p-3 md:max-w-md">
         <div className="flex items-center gap-2 border-b border-[#0A1C14] pb-1.5">
-          <Radio className={cn("size-3", phase === "listening" || isProcessing ? "animate-pulse text-[#FFD700]" : "text-[#F8FAFC]/30")} />
+          <Radio className={cn("size-3", isListeningUi || isProcessing ? "animate-pulse text-[#FFD700]" : "text-[#F8FAFC]/30")} />
           <span className="text-[10px] font-semibold uppercase tracking-wider text-[#F8FAFC]/40">
             System Activity
           </span>
