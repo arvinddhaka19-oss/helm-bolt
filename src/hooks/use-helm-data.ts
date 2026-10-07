@@ -135,7 +135,9 @@ export function useHelmData() {
           completed: false,
           created_at: new Date().toISOString(),
         }
-        const { error: insertError } = await supabase
+        setTasks((prev) => [...prev, newTask])
+        tasksCreated++
+        void supabase
           .from("tasks")
           .insert({
             id: newTask.id,
@@ -143,17 +145,18 @@ export function useHelmData() {
             priority: newTask.priority,
             due_label: newTask.due_label,
           })
-        if (insertError) {
-          setError(insertError.message)
-          continue
-        }
-        setTasks((prev) => [...prev, newTask])
-        tasksCreated++
+          .then(({ error: insertError }) => {
+            if (insertError) {
+              setError(insertError.message)
+              setTasks((prev) => prev.filter((item) => item.id !== newTask.id))
+            }
+          })
         void addActivityEntry("KAIROS", `New task added: "${task.title}" (${task.priority})`)
       }
 
       for (const update of intent.metricUpdates) {
-        const { error: insertError } = await supabase
+        metricsUpdated++
+        void supabase
           .from("metrics")
           .insert({
             module: update.module,
@@ -162,11 +165,11 @@ export function useHelmData() {
             status: update.status,
             percent: update.percent,
           })
-        if (insertError) {
-          setError(insertError.message)
-          continue
-        }
-        metricsUpdated++
+          .then(({ error: insertError }) => {
+            if (insertError) {
+              setError(insertError.message)
+            }
+          })
         void addActivityEntry(update.module as ActivityEntry["source"], `Updated ${update.label} → ${update.value}`)
 
         if (update.module === "ATLAS") {
