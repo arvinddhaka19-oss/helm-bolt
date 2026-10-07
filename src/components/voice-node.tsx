@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from "react"
-import { Mic, Loader2, CheckCircle2, Radio, MicOff, AlertCircle } from "lucide-react"
+import { Mic, Loader2, CheckCircle2, Radio, MicOff, AlertCircle, Send } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { useSpeechRecognition } from "@/hooks/use-speech-recognition"
 import { parseVoiceIntent } from "@/lib/voice-parser"
 import type { ParsedIntent, ActivityEntry } from "@/types"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 
 type Phase = "idle" | "listening" | "processing" | "result"
 
@@ -38,10 +40,18 @@ export function VoiceNode({ activityLog, processVoiceIntent }: VoiceNodeProps) {
 
   const { transcript, interimTranscript, isListening, isSupported, error, start, stop, reset } =
     useSpeechRecognition()
+  const [textInput, setTextInput] = useState("")
+  const [showTextInput, setShowTextInput] = useState(false)
 
   useEffect(() => {
     logEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [activityLog])
+
+  useEffect(() => {
+    if (error && phase === "listening") {
+      setPhase("idle")
+    }
+  }, [error, phase])
 
   const handleMicClick = useCallback(() => {
     if (phase === "idle") {
@@ -53,6 +63,29 @@ export function VoiceNode({ activityLog, processVoiceIntent }: VoiceNodeProps) {
       setPhase("processing")
     }
   }, [phase, start, stop, reset])
+
+  const handleTextSubmit = useCallback(async () => {
+    const text = textInput.trim()
+    if (!text) return
+    setPhase("processing")
+    const intent = parseVoiceIntent(text)
+    const result = await processVoiceIntent(intent)
+    if (result.tasksCreated > 0 || result.metricsUpdated > 0) {
+      setResultSummary(
+        `${result.tasksCreated} task${result.tasksCreated !== 1 ? "s" : ""} + ${result.metricsUpdated} metric${result.metricsUpdated !== 1 ? "s" : ""} updated`
+      )
+    } else {
+      setResultSummary("No actionable updates detected")
+    }
+    setPhase("result")
+    setTextInput("")
+    setShowTextInput(false)
+    const resetTimer = setTimeout(() => {
+      setPhase("idle")
+      setResultSummary("")
+    }, 4000)
+    return () => clearTimeout(resetTimer)
+  }, [textInput, processVoiceIntent])
 
   useEffect(() => {
     if (phase !== "listening") return
@@ -99,11 +132,50 @@ export function VoiceNode({ activityLog, processVoiceIntent }: VoiceNodeProps) {
       )}
 
       {error && (
-        <div className="flex items-center gap-2 rounded-lg border border-[#C8102E]/40 bg-[#C8102E]/10 px-4 py-2">
-          <AlertCircle className="size-4 text-[#C8102E]" />
-          <p className="text-xs text-[#F8FAFC]/70">{error}</p>
+        <div className="flex w-full max-w-sm flex-col gap-2 md:max-w-md">
+          <div className="flex items-center gap-2 rounded-lg border border-[#C8102E]/40 bg-[#C8102E]/10 px-4 py-2">
+            <AlertCircle className="size-4 shrink-0 text-[#C8102E]" />
+            <p className="text-xs text-[#F8FAFC]/70">{error}</p>
+          </div>
+          {!showTextInput && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="border-[#0A1C14] bg-[#0A1C14] text-xs text-[#F8FAFC]/70 hover:bg-[#040D0A]"
+              onClick={() => setShowTextInput(true)}
+            >
+              Type instead
+            </Button>
+          )}
         </div>
       )}
+
+      {/* Text input fallback — shown when mic unavailable or user chooses to type */}
+      {showTextInput || (!isSupported && phase === "idle") ? (
+        <div className="flex w-full max-w-sm items-center gap-2 md:max-w-md">
+          <Input
+            value={textInput}
+            onChange={(e) => setTextInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault()
+                void handleTextSubmit()
+              }
+            }}
+            placeholder='Try: "I slept 7 hours and remind me to review notes"'
+            className="border-[#0A1C14] bg-[#040D0A] text-sm text-[#F8FAFC] placeholder:text-[#F8FAFC]/30"
+            disabled={isProcessing || isResult}
+          />
+          <Button
+            size="icon"
+            className="shrink-0 bg-[#FFD700] text-[#040D0A] hover:bg-[#FFD700]/80"
+            onClick={() => void handleTextSubmit()}
+            disabled={!textInput.trim() || isProcessing || isResult}
+          >
+            <Send className="size-4" />
+          </Button>
+        </div>
+      ) : null}
 
       {/* Ripple rings */}
       <div className="relative flex items-center justify-center">
@@ -220,6 +292,12 @@ export function VoiceNode({ activityLog, processVoiceIntent }: VoiceNodeProps) {
             <p className="text-xs tracking-wide text-[#F8FAFC]/40">
               Say things like "I slept 7 hours" or "Remind me to review notes"
             </p>
+            <button
+              className="mt-1 text-[11px] text-[#FFD700]/50 underline-offset-2 hover:text-[#FFD700] hover:underline"
+              onClick={() => setShowTextInput(true)}
+            >
+              or type your update
+            </button>
           </>
         )}
       </div>

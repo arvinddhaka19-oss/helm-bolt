@@ -68,6 +68,7 @@ export function useSpeechRecognition() {
     }
 
     recognition.onerror = (event: SpeechRecognitionErrorEventLike) => {
+      setIsListening(false)
       if (event.error === "no-speech" || event.error === "aborted") return
       if (event.error === "not-allowed" || event.error === "service-not-allowed") {
         setError("Microphone permission denied. Please allow mic access and try again.")
