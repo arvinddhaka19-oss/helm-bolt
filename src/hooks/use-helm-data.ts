@@ -95,17 +95,20 @@ export function useHelmData() {
   )
 
   const addActivityEntry = useCallback(async (source: ActivityEntry["source"], text: string) => {
-    const { data, error: insertError } = await supabase
+    const entry: ActivityEntry = {
+      id: crypto.randomUUID(),
+      source,
+      text,
+      created_at: new Date().toISOString(),
+    }
+    setActivityLog((prev) => [...prev.slice(-49), entry])
+
+    const { error: insertError } = await supabase
       .from("activity_log")
       .insert({ source, text })
-      .select()
-      .single()
     if (insertError) {
       setError(insertError.message)
-      return
     }
-    const entry = data as ActivityEntry
-    setActivityLog((prev) => [...prev.slice(-49), entry])
   }, [])
 
   const processVoiceIntent = useCallback(
@@ -114,29 +117,39 @@ export function useHelmData() {
       let metricsUpdated = 0
 
       if (intent.transcript.trim()) {
-        await addActivityEntry("VOICE", `Heard: "${intent.transcript.trim()}"`)
+        void addActivityEntry("VOICE", `Heard: "${intent.transcript.trim()}"`)
       }
 
       if (intent.tasks.length > 0) {
-        await addActivityEntry("HELM", `Parsing intent: ${intent.tasks.length} task(s) + ${intent.metricUpdates.length} metric update(s)`)
+        void addActivityEntry("HELM", `Parsing intent: ${intent.tasks.length} task(s) + ${intent.metricUpdates.length} metric update(s)`)
       } else if (intent.metricUpdates.length > 0) {
-        await addActivityEntry("HELM", `Parsing intent: ${intent.metricUpdates.length} metric update(s)`)
+        void addActivityEntry("HELM", `Parsing intent: ${intent.metricUpdates.length} metric update(s)`)
       }
 
       for (const task of intent.tasks) {
-        const { data, error: insertError } = await supabase
+        const newTask: Task = {
+          id: crypto.randomUUID(),
+          title: task.title,
+          priority: task.priority,
+          due_label: task.due_label,
+          completed: false,
+          created_at: new Date().toISOString(),
+        }
+        const { error: insertError } = await supabase
           .from("tasks")
-          .insert({ title: task.title, priority: task.priority, due_label: task.due_label })
-          .select()
-          .single()
+          .insert({
+            id: newTask.id,
+            title: newTask.title,
+            priority: newTask.priority,
+            due_label: newTask.due_label,
+          })
         if (insertError) {
           setError(insertError.message)
           continue
         }
-        const newTask = data as Task
         setTasks((prev) => [...prev, newTask])
         tasksCreated++
-        await addActivityEntry("KAIROS", `New task added: "${task.title}" (${task.priority})`)
+        void addActivityEntry("KAIROS", `New task added: "${task.title}" (${task.priority})`)
       }
 
       for (const update of intent.metricUpdates) {
@@ -154,7 +167,7 @@ export function useHelmData() {
           continue
         }
         metricsUpdated++
-        await addActivityEntry(update.module as ActivityEntry["source"], `Updated ${update.label} → ${update.value}`)
+        void addActivityEntry(update.module as ActivityEntry["source"], `Updated ${update.label} → ${update.value}`)
 
         if (update.module === "ATLAS") {
           setAtlasMetrics((prev) => {
@@ -180,9 +193,9 @@ export function useHelmData() {
       }
 
       if (tasksCreated > 0 || metricsUpdated > 0) {
-        await addActivityEntry("HELM", `Sync complete — ${tasksCreated} task(s) + ${metricsUpdated} metric(s) updated`)
+        void addActivityEntry("HELM", `Sync complete — ${tasksCreated} task(s) + ${metricsUpdated} metric(s) updated`)
       } else if (intent.transcript.trim()) {
-        await addActivityEntry("HELM", "No actionable updates detected in speech")
+        void addActivityEntry("HELM", "No actionable updates detected in speech")
       }
 
       return { tasksCreated, metricsUpdated }

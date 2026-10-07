@@ -86,11 +86,11 @@ function statusFromSleepHours(hours: number): MetricStatus {
 
 function parseMetricUpdate(text: string, config: MetricConfig): ParsedMetricUpdate | null {
   const lower = text.toLowerCase()
-  const matched = config.keywords.some((k) => lower.includes(k))
-  if (!matched) return null
+  const matchedKeyword = config.keywords.find((keyword) => lower.includes(keyword))
+  if (!matchedKeyword) return null
 
   if (config.unit === "hours") {
-    const hours = extractNumber(lower, config.keywords[0])
+    const hours = extractNumber(lower, matchedKeyword)
     if (hours != null) {
       return {
         module: config.module,
@@ -147,31 +147,31 @@ function parseTasks(text: string): ParsedTask[] {
   ]
 
   for (const pattern of taskPatterns) {
-    const matches = text.matchAll(pattern)
-    for (const match of matches) {
-      let title = match[1].trim()
-      title = title.replace(/^(?:to\s+|that\s+|the\s+)/i, "")
-      title = title.charAt(0).toUpperCase() + title.slice(1)
-      if (title.length < 3) continue
+    const match = text.match(pattern)
+    if (!match) continue
 
-      let priority: TaskPriority = "medium"
-      for (const pk of PRIORITY_KEYWORDS) {
-        if (pk.words.some((w) => lower.includes(w))) {
-          priority = pk.priority
-          break
-        }
+    let title = match[1].trim()
+    title = title.replace(/^(?:to\s+|that\s+|the\s+)/i, "")
+    title = title.charAt(0).toUpperCase() + title.slice(1)
+    if (title.length < 3) continue
+
+    let priority: TaskPriority = "medium"
+    for (const pk of PRIORITY_KEYWORDS) {
+      if (pk.words.some((w) => lower.includes(w))) {
+        priority = pk.priority
+        break
       }
-
-      let due_label = "Today"
-      for (const dk of DUE_KEYWORDS) {
-        if (dk.words.some((w) => lower.includes(w))) {
-          due_label = dk.due_label
-          break
-        }
-      }
-
-      tasks.push({ title, priority, due_label })
     }
+
+    let due_label = "Today"
+    for (const dk of DUE_KEYWORDS) {
+      if (dk.words.some((w) => lower.includes(w))) {
+        due_label = dk.due_label
+        break
+      }
+    }
+
+    tasks.push({ title, priority, due_label })
   }
 
   const seen = new Set<string>()
