@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { Menu, X } from "lucide-react"
+import { Activity, LayoutDashboard, Menu, PanelsTopLeft, X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
@@ -8,8 +8,12 @@ import { AtlasCard } from "@/components/atlas-card"
 import { MetisCard } from "@/components/metis-card"
 import { KairosPanel } from "@/components/kairos-panel"
 import { AlertTicker } from "@/components/alert-ticker"
+import { ActivityFeed } from "@/components/activity-feed"
+import { CommandOverview } from "@/components/command-overview"
 import { useHelmData } from "@/hooks/use-helm-data"
 import type { ParsedIntent } from "@/types"
+
+type AppView = "overview" | "modules" | "activity"
 
 function formatTime(date: Date): string {
   return date.toLocaleTimeString("en-GB", {
@@ -30,6 +34,7 @@ export function App() {
     processVoiceIntent,
   } = useHelmData()
   const [sheetOpen, setSheetOpen] = useState(false)
+  const [view, setView] = useState<AppView>("modules")
   const [currentTime, setCurrentTime] = useState(() => formatTime(new Date()))
 
   useEffect(() => {
@@ -87,30 +92,61 @@ export function App() {
         </div>
       )}
 
-      {/* Main content grid */}
-      <main className="grid flex-1 grid-cols-1 gap-4 overflow-hidden p-4 md:grid-cols-[280px_1fr_320px] md:px-6 md:py-6">
-        {/* Left column — ATLAS & METIS (hidden on mobile) */}
-        <div className="hidden flex-col gap-4 overflow-y-auto md:flex">
-          <AtlasCard metrics={atlasMetrics} />
-          <MetisCard metrics={metisMetrics} />
-        </div>
+      <nav className="flex items-center gap-1 overflow-x-auto border-b border-[#0A1C14] px-4 py-2 md:px-6" aria-label="Primary views">
+        {([
+          ["modules", "Modules", PanelsTopLeft],
+          ["overview", "Overview", LayoutDashboard],
+          ["activity", "Activity", Activity],
+        ] as const).map(([key, label, Icon]) => (
+          <Button
+            key={key}
+            variant="ghost"
+            size="sm"
+            onClick={() => setView(key)}
+            className={view === key ? "gap-2 bg-[#FFD700]/10 text-[#FFD700]" : "gap-2 text-[#F8FAFC]/40 hover:bg-[#0A1C14] hover:text-[#F8FAFC]"}
+          >
+            <Icon className="size-4" />
+            {label}
+          </Button>
+        ))}
+      </nav>
 
-        {/* Center stage — Voice Node */}
-        <div className="flex items-center justify-center overflow-hidden rounded-xl bg-[#0A1C14]/30">
-          {loading ? (
-            <p className="text-sm text-[#F8FAFC]/40">Loading...</p>
-          ) : (
-            <VoiceNode
-              activityLog={activityLog}
-              processVoiceIntent={handleVoiceIntent}
-            />
-          )}
-        </div>
+      <main className="flex min-h-0 flex-1 flex-col overflow-hidden p-4 md:px-6 md:py-6">
+        {view === "overview" && (
+          <CommandOverview
+            atlasMetrics={atlasMetrics}
+            metisMetrics={metisMetrics}
+            tasks={tasks}
+            alerts={alerts}
+            activityLog={activityLog}
+          />
+        )}
 
-        {/* Right column — KAIROS (hidden on mobile) */}
-        <div className="hidden overflow-hidden md:flex">
-          <KairosPanel tasks={tasks} onToggle={toggleTask} />
-        </div>
+        {view === "activity" && <ActivityFeed entries={activityLog} />}
+
+        {view === "modules" && (
+          <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 overflow-hidden md:grid-cols-[280px_1fr_320px]">
+            <div className="hidden flex-col gap-4 overflow-y-auto md:flex">
+              <AtlasCard metrics={atlasMetrics} />
+              <MetisCard metrics={metisMetrics} />
+            </div>
+
+            <div className="flex min-h-0 items-center justify-center overflow-hidden rounded-xl bg-[#0A1C14]/30">
+              {loading ? (
+                <p className="text-sm text-[#F8FAFC]/40">Loading...</p>
+              ) : (
+                <VoiceNode
+                  activityLog={activityLog}
+                  processVoiceIntent={handleVoiceIntent}
+                />
+              )}
+            </div>
+
+            <div className="hidden min-h-0 overflow-hidden md:flex">
+              <KairosPanel tasks={tasks} onToggle={toggleTask} />
+            </div>
+          </div>
+        )}
       </main>
 
       {/* Alert ticker (desktop floating) */}
@@ -133,6 +169,26 @@ export function App() {
               <X className="size-4" />
             </Button>
           </SheetHeader>
+          <div className="flex flex-col gap-1">
+            {([
+              ["modules", "Modules", PanelsTopLeft],
+              ["overview", "Overview", LayoutDashboard],
+              ["activity", "Activity", Activity],
+            ] as const).map(([key, label, Icon]) => (
+              <Button
+                key={key}
+                variant="ghost"
+                onClick={() => {
+                  setView(key)
+                  setSheetOpen(false)
+                }}
+                className={view === key ? "justify-start gap-2 bg-[#FFD700]/10 text-[#FFD700]" : "justify-start gap-2 text-[#F8FAFC]/60"}
+              >
+                <Icon className="size-4" />
+                {label}
+              </Button>
+            ))}
+          </div>
           <AtlasCard metrics={atlasMetrics} />
           <MetisCard metrics={metisMetrics} />
           <KairosPanel tasks={tasks} onToggle={toggleTask} />
