@@ -36,6 +36,7 @@ function formatTimeAgo(iso: string): string {
 export function VoiceNode({ activityLog, processVoiceIntent }: VoiceNodeProps) {
   const [phase, setPhase] = useState<Phase>("idle")
   const [resultSummary, setResultSummary] = useState("")
+  const [processingNotice, setProcessingNotice] = useState<string | null>(null)
   const logEndRef = useRef<HTMLDivElement>(null)
 
   const { transcript, interimTranscript, isListening, isSupported, error, start, stop, reset } =
@@ -53,9 +54,20 @@ export function VoiceNode({ activityLog, processVoiceIntent }: VoiceNodeProps) {
     }
   }, [error, phase])
 
+  useEffect(() => {
+    if (phase !== "processing") return
+    const timeout = setTimeout(() => {
+      setPhase("idle")
+      setShowTextInput(true)
+      setProcessingNotice("This update is taking too long. You can retry it below.")
+    }, 10000)
+    return () => clearTimeout(timeout)
+  }, [phase])
+
   const handleMicClick = useCallback(() => {
     if (phase === "idle" || error) {
       reset()
+      setProcessingNotice(null)
       start()
       setPhase("listening")
     } else if (phase === "listening") {
@@ -68,8 +80,17 @@ export function VoiceNode({ activityLog, processVoiceIntent }: VoiceNodeProps) {
     const text = textInput.trim()
     if (!text) return
     setPhase("processing")
+    setProcessingNotice(null)
     const intent = parseVoiceIntent(text)
-    const result = await processVoiceIntent(intent)
+    let result
+    try {
+      result = await processVoiceIntent(intent)
+    } catch {
+      setPhase("idle")
+      setShowTextInput(true)
+      setProcessingNotice("The update could not be saved. Please try again.")
+      return
+    }
     if (result.tasksCreated > 0 || result.metricsUpdated > 0) {
       setResultSummary(
         `${result.tasksCreated} task${result.tasksCreated !== 1 ? "s" : ""} + ${result.metricsUpdated} metric${result.metricsUpdated !== 1 ? "s" : ""} updated`
@@ -94,8 +115,17 @@ export function VoiceNode({ activityLog, processVoiceIntent }: VoiceNodeProps) {
     if (!isListening && transcript) {
       void (async () => {
         setPhase("processing")
+        setProcessingNotice(null)
         const intent = parseVoiceIntent(transcript)
-        const result = await processVoiceIntent(intent)
+        let result
+        try {
+          result = await processVoiceIntent(intent)
+        } catch {
+          setPhase("idle")
+          setShowTextInput(true)
+          setProcessingNotice("The update could not be saved. Please try again.")
+          return
+        }
         if (result.tasksCreated > 0 || result.metricsUpdated > 0) {
           setResultSummary(
             `${result.tasksCreated} task${result.tasksCreated !== 1 ? "s" : ""} + ${result.metricsUpdated} metric${result.metricsUpdated !== 1 ? "s" : ""} updated`
@@ -147,6 +177,13 @@ export function VoiceNode({ activityLog, processVoiceIntent }: VoiceNodeProps) {
               Type instead
             </Button>
           )}
+        </div>
+      )}
+
+      {processingNotice && (
+        <div className="flex w-full max-w-sm items-center gap-2 rounded-lg border border-[#FFD700]/30 bg-[#FFD700]/10 px-4 py-2 md:max-w-md">
+          <AlertCircle className="size-4 shrink-0 text-[#FFD700]" />
+          <p className="text-xs text-[#F8FAFC]/70">{processingNotice}</p>
         </div>
       )}
 
