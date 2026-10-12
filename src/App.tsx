@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { Activity, LayoutDashboard, Menu, PanelsTopLeft, X } from "lucide-react"
+import { Activity, LayoutDashboard, Menu, PanelsTopLeft, PlugZap, X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
@@ -10,10 +10,11 @@ import { KairosPanel } from "@/components/kairos-panel"
 import { AlertTicker } from "@/components/alert-ticker"
 import { ActivityFeed } from "@/components/activity-feed"
 import { CommandOverview } from "@/components/command-overview"
+import { IntegrationsPage } from "@/components/integrations-page"
 import { useHelmData } from "@/hooks/use-helm-data"
 import type { ParsedIntent } from "@/types"
 
-type AppView = "overview" | "modules" | "activity"
+type AppView = "overview" | "modules" | "activity" | "integrations"
 
 function formatTime(date: Date): string {
   return date.toLocaleTimeString("en-GB", {
@@ -97,6 +98,7 @@ export function App() {
           ["modules", "Modules", PanelsTopLeft],
           ["overview", "Overview", LayoutDashboard],
           ["activity", "Activity", Activity],
+          ["integrations", "Integrations", PlugZap],
         ] as const).map(([key, label, Icon]) => (
           <Button
             key={key}
@@ -123,6 +125,8 @@ export function App() {
         )}
 
         {view === "activity" && <ActivityFeed entries={activityLog} />}
+
+        {view === "integrations" && <IntegrationsPage />}
 
         {view === "modules" && (
           <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 overflow-hidden md:grid-cols-[280px_1fr_320px]">
@@ -174,6 +178,7 @@ export function App() {
               ["modules", "Modules", PanelsTopLeft],
               ["overview", "Overview", LayoutDashboard],
               ["activity", "Activity", Activity],
+              ["integrations", "Integrations", PlugZap],
             ] as const).map(([key, label, Icon]) => (
               <Button
                 key={key}
