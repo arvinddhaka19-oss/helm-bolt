@@ -2,7 +2,20 @@ import { useCallback, useEffect, useRef, useState } from "react"
 
 import { supabase } from "@/lib/supabase"
 
-export type IntegrationProvider = "claude" | "openrouter" | "openai" | "chatgpt" | "ollama" | "google_workspace"
+export type IntegrationProvider =
+  | "google"
+  | "claude"
+  | "chatgpt"
+  | "openai"
+  | "gemini"
+  | "perplexity"
+  | "mistral"
+  | "groq"
+  | "anthropic_api"
+  | "cohere"
+  | "openrouter"
+  | "ollama"
+
 export type IntegrationStatus = "available" | "configured" | "needs_setup"
 
 export interface IntegrationConnection {
@@ -51,7 +64,12 @@ export function useIntegrations() {
   }, [loadConnections])
 
   const saveConnection = useCallback(
-    async (provider: IntegrationProvider, authMethod: IntegrationConnection["auth_method"], accountLabel: string | null, secret?: string) => {
+    async (
+      provider: IntegrationProvider,
+      authMethod: IntegrationConnection["auth_method"],
+      accountLabel: string | null,
+      secret?: string
+    ) => {
       if (secret) sessionSecrets.current[provider] = secret
       setSaving(true)
       const now = new Date().toISOString()
