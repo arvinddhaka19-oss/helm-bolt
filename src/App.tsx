@@ -47,7 +47,7 @@ export function App() {
 
   const topAlert = alerts[0]
 
-  const handleVoiceIntent = async (intent: ParsedIntent) => {
+  const handleVoiceIntent = async (intent: ParsedIntent & { model?: string }) => {
     return processVoiceIntent(intent)
   }
 

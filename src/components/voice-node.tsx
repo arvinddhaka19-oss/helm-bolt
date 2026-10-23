@@ -3,7 +3,7 @@ import { Mic, Loader2, CheckCircle2, Radio, MicOff, AlertCircle, Send } from "lu
 
 import { cn } from "@/lib/utils"
 import { useSpeechRecognition } from "@/hooks/use-speech-recognition"
-import { parseVoiceIntent } from "@/lib/voice-parser"
+import { parseIntentWithAI } from "@/lib/ai-parser"
 import type { ParsedIntent, ActivityEntry } from "@/types"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -12,7 +12,7 @@ type Phase = "idle" | "listening" | "processing" | "result"
 
 interface VoiceNodeProps {
   activityLog: ActivityEntry[]
-  processVoiceIntent: (intent: ParsedIntent) => Promise<{ tasksCreated: number; metricsUpdated: number }>
+  processVoiceIntent: (intent: ParsedIntent & { model?: string }) => Promise<{ tasksCreated: number; metricsUpdated: number }>
 }
 
 const SOURCE_COLORS: Record<ActivityEntry["source"], string> = {
@@ -81,7 +81,7 @@ export function VoiceNode({ activityLog, processVoiceIntent }: VoiceNodeProps) {
     if (!text) return
     setPhase("processing")
     setProcessingNotice(null)
-    const intent = parseVoiceIntent(text)
+    const intent = await parseIntentWithAI(text)
     let result
     try {
       result = await processVoiceIntent(intent)
@@ -116,7 +116,7 @@ export function VoiceNode({ activityLog, processVoiceIntent }: VoiceNodeProps) {
       void (async () => {
         setPhase("processing")
         setProcessingNotice(null)
-        const intent = parseVoiceIntent(transcript)
+        const intent = await parseIntentWithAI(transcript)
         let result
         try {
           result = await processVoiceIntent(intent)

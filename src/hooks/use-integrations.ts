@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 
+import { storeApiKey } from "@/lib/ai-parser"
 import { supabase } from "@/lib/supabase"
 
 export type IntegrationProvider =
@@ -70,7 +71,10 @@ export function useIntegrations() {
       accountLabel: string | null,
       secret?: string
     ) => {
-      if (secret) sessionSecrets.current[provider] = secret
+      if (secret) {
+        sessionSecrets.current[provider] = secret
+        storeApiKey(provider, secret)
+      }
       setSaving(true)
       const now = new Date().toISOString()
       const { error: saveError } = await supabase.from("integration_connections").upsert(

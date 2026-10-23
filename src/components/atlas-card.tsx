@@ -1,8 +1,11 @@
 import { useEffect, useRef, useState } from "react"
-import { Activity } from "lucide-react"
+import { Activity, ChevronDown } from "lucide-react"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { Progress } from "@/components/ui/progress"
+import { MetricTrendChart } from "@/components/metric-trend-chart"
+import { useMetricHistory } from "@/hooks/use-metric-history"
 import type { AtlasMetric } from "@/types"
 import { cn } from "@/lib/utils"
 
@@ -50,6 +53,59 @@ function useChangedLabels(metrics: AtlasMetric[]): Record<string, boolean> {
   return Object.fromEntries([...changedLabels].map((l) => [l, true])) as Record<string, boolean>
 }
 
+function MetricRow({ metric, changed }: { metric: AtlasMetric; changed: boolean }) {
+  const [open, setOpen] = useState(false)
+  const { history, loading } = useMetricHistory(open ? metric.label : null)
+
+  return (
+    <Collapsible open={open} onOpenChange={setOpen}>
+      <CollapsibleTrigger asChild>
+        <div
+          className={cn(
+            "flex cursor-pointer flex-col gap-1 rounded-md px-2 py-1 transition-all duration-700 hover:bg-[#040D0A]/50",
+            changed && "bg-[#FFD700]/10 scale-[1.02]"
+          )}
+        >
+          <div className="flex items-center justify-between text-sm">
+            <div className="flex items-center gap-2">
+              <span
+                className={cn(
+                  "inline-block size-2 rounded-full transition-all duration-500",
+                  statusDot[metric.status],
+                  changed && "scale-150 shadow-[0_0_6px_currentColor]"
+                )}
+              />
+              <span className="text-[#F8FAFC]/70">{metric.label}</span>
+              <ChevronDown className={cn("size-3 text-[#F8FAFC]/30 transition-transform", open && "rotate-180")} />
+            </div>
+            <span
+              className="font-semibold transition-colors duration-500"
+              style={{ color: statusColor[metric.status] }}
+            >
+              {metric.value}
+            </span>
+          </div>
+          {metric.percent != null && (
+            <Progress
+              value={metric.percent}
+              className="h-1.5 bg-[#040D0A] transition-all duration-700 [&>[data-slot=progress-indicator]]:bg-[#00FF66]"
+            />
+          )}
+        </div>
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        <div className="px-2 py-1">
+          {loading ? (
+            <p className="py-2 text-center text-xs text-[#F8FAFC]/30">Loading history...</p>
+          ) : (
+            <MetricTrendChart history={history} accentColor={statusColor[metric.status]} />
+          )}
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
+  )
+}
+
 export function AtlasCard({ metrics }: AtlasCardProps) {
   const changedLabels = useChangedLabels(metrics)
 
@@ -66,38 +122,7 @@ export function AtlasCard({ metrics }: AtlasCardProps) {
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
         {metrics.map((m) => (
-          <div
-            key={m.label}
-            className={cn(
-              "flex flex-col gap-1 rounded-md px-2 py-1 transition-all duration-700",
-              changedLabels[m.label] && "bg-[#FFD700]/10 scale-[1.02]"
-            )}
-          >
-            <div className="flex items-center justify-between text-sm">
-              <div className="flex items-center gap-2">
-                <span
-                  className={cn(
-                    "inline-block size-2 rounded-full transition-all duration-500",
-                    statusDot[m.status],
-                    changedLabels[m.label] && "scale-150 shadow-[0_0_6px_currentColor]"
-                  )}
-                />
-                <span className="text-[#F8FAFC]/70">{m.label}</span>
-              </div>
-              <span
-                className="font-semibold transition-colors duration-500"
-                style={{ color: statusColor[m.status] }}
-              >
-                {m.value}
-              </span>
-            </div>
-            {m.percent != null && (
-              <Progress
-                value={m.percent}
-                className="h-1.5 bg-[#040D0A] transition-all duration-700 [&>[data-slot=progress-indicator]]:bg-[#00FF66]"
-              />
-            )}
-          </div>
+          <MetricRow key={m.label} metric={m} changed={!!changedLabels[m.label]} />
         ))}
       </CardContent>
     </Card>

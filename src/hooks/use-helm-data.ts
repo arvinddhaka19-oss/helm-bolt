@@ -112,7 +112,7 @@ export function useHelmData() {
   }, [])
 
   const processVoiceIntent = useCallback(
-    async (intent: ParsedIntent): Promise<{ tasksCreated: number; metricsUpdated: number }> => {
+    async (intent: ParsedIntent & { model?: string }): Promise<{ tasksCreated: number; metricsUpdated: number }> => {
       let tasksCreated = 0
       let metricsUpdated = 0
 
@@ -120,10 +120,11 @@ export function useHelmData() {
         void addActivityEntry("VOICE", `Heard: "${intent.transcript.trim()}"`)
       }
 
+      const parserTag = intent.model ? ` via ${intent.model}` : ""
       if (intent.tasks.length > 0) {
-        void addActivityEntry("HELM", `Parsing intent: ${intent.tasks.length} task(s) + ${intent.metricUpdates.length} metric update(s)`)
+        void addActivityEntry("HELM", `Parsing intent${parserTag}: ${intent.tasks.length} task(s) + ${intent.metricUpdates.length} metric update(s)`)
       } else if (intent.metricUpdates.length > 0) {
-        void addActivityEntry("HELM", `Parsing intent: ${intent.metricUpdates.length} metric update(s)`)
+        void addActivityEntry("HELM", `Parsing intent${parserTag}: ${intent.metricUpdates.length} metric update(s)`)
       }
 
       for (const task of intent.tasks) {
